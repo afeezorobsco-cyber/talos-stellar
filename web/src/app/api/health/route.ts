@@ -1,5 +1,5 @@
 import { db as defaultDb } from "@/db";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import {
   DEFAULT_HORIZON,
@@ -11,7 +11,7 @@ import {
 export const runtime = "nodejs";
 
 type Db = {
-  execute: (query: any) => Promise<any>;
+  execute: (query: SQL) => Promise<unknown>;
 };
 
 /**
@@ -110,5 +110,6 @@ export function createHealthHandler({
 
 export const GET = createHealthHandler({
   db: defaultDb,
-  fetchFn: fetch,
+  // Resolve the global at call time so instrumented/stubbed fetch is honoured.
+  fetchFn: (input, init) => fetch(input, init),
 });
