@@ -88,6 +88,8 @@ class NetworkRule:
     def __post_init__(self) -> None:
         normalized_host = _normalize_host(self.host)
         object.__setattr__(self, "host", normalized_host)
+        if not isinstance(self.path_prefix, str):
+            raise ManifestValidationError("network path prefixes must be strings")
         decoded_prefix = _decode_path(self.path_prefix)
         if not self.path_prefix.startswith("/") or ".." in decoded_prefix.split("/"):
             raise ManifestValidationError("network path prefixes must be absolute and traversal-free")
@@ -99,7 +101,11 @@ class NetworkRule:
         if not normalized_methods or not normalized_methods <= _SAFE_METHODS:
             raise ManifestValidationError("network methods contain unsupported values")
         object.__setattr__(self, "methods", normalized_methods)
-        if self.port is not None and not 1 <= self.port <= 65535:
+        if self.port is not None and (
+            isinstance(self.port, bool)
+            or not isinstance(self.port, int)
+            or not 1 <= self.port <= 65535
+        ):
             raise ManifestValidationError("network rule port is out of range")
 
 
