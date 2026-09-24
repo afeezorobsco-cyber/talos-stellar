@@ -147,7 +147,8 @@ describe("POST /api/talos/:id/sign — asset field pair tests", () => {
 
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.error).toBe("Validation failed");
+    // Standard error envelope (#501)
+    expect(body).toMatchObject({ code: "VALIDATION_ERROR", message: "Validation failed" });
     expect(signMocks.signX402Payment).not.toHaveBeenCalled();
   });
 
@@ -235,7 +236,7 @@ describe("POST /api/talos — stellarAssetCode pair tests", () => {
     name: "Test Agent",
     category: "Development",
     description: "A test agent",
-    creatorPublicKey: "GCREATOR",
+    creatorPublicKey: VALID_ISSUER, // creatorPublicKey must be a real G-address
     signature: "sig",
     message: "msg",
   };
