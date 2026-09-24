@@ -72,7 +72,7 @@ describe("health probes", () => {
 
   describe("readiness probe (GET /api/health)", () => {
     it("returns 200 ok when all dependencies are healthy", async () => {
-      vi.mocked(db.execute).mockResolvedValue({ rows: [] });
+      vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
 
       const response = await healthGet(healthRequest());
@@ -101,7 +101,7 @@ describe("health probes", () => {
     });
 
     it("returns 503 with stellar error when Horizon fails", async () => {
-      vi.mocked(db.execute).mockResolvedValue({ rows: [] });
+      vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
       mockFetch.mockResolvedValue(new Response(null, { status: 503 }));
 
       const response = await healthGet(healthRequest());
@@ -143,7 +143,7 @@ describe("health probes", () => {
     it("returns a bounded response when the database times out", async () => {
       vi.useFakeTimers();
       vi.mocked(db.execute).mockImplementation(
-        () => new Promise(() => {}) // never settles
+        () => new Promise(() => {}) as never // never settles
       );
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
 
@@ -158,9 +158,9 @@ describe("health probes", () => {
 
     it("returns a bounded response when Horizon times out", async () => {
       vi.useFakeTimers();
-      vi.mocked(db.execute).mockResolvedValue({ rows: [] });
+      vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
       mockFetch.mockImplementation(
-        () => new Promise(() => {}) // never settles
+        () => new Promise(() => {}) as never // never settles
       );
 
       const pending = healthGet(healthRequest());
@@ -175,7 +175,7 @@ describe("health probes", () => {
 
   describe("readiness probe (GET /api/health/ready)", () => {
     it("matches the main /api/health response contract", async () => {
-      vi.mocked(db.execute).mockResolvedValue({ rows: [] });
+      vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
 
       const [healthResponse, readyResponse] = await Promise.all([
@@ -194,7 +194,7 @@ describe("health probes", () => {
     it("returns 503 with db error when the database times out", async () => {
       vi.useFakeTimers();
       vi.mocked(db.execute).mockImplementation(
-        () => new Promise(() => {})
+        () => new Promise(() => {}) as never
       );
       mockFetch.mockResolvedValue(new Response(null, { status: 200 }));
 
@@ -232,8 +232,8 @@ describe("health probe timeout env config", () => {
   it("honors valid HEALTH_*_TIMEOUT_MS overrides", async () => {
     const { parseTimeoutMs, resolveDbTimeoutMs, resolveStellarTimeoutMs } = await import("./utils");
     expect(parseTimeoutMs("1500", 2000)).toBe(1500);
-    expect(resolveDbTimeoutMs({ HEALTH_DB_TIMEOUT_MS: "1500" } as NodeJS.ProcessEnv)).toBe(1500);
-    expect(resolveStellarTimeoutMs({ HEALTH_STELLAR_TIMEOUT_MS: "4500" } as NodeJS.ProcessEnv)).toBe(4500);
+    expect(resolveDbTimeoutMs({ HEALTH_DB_TIMEOUT_MS: "1500" })).toBe(1500);
+    expect(resolveStellarTimeoutMs({ HEALTH_STELLAR_TIMEOUT_MS: "4500" })).toBe(4500);
   });
 
   it("falls back on malformed, zero, and out-of-range values", async () => {
