@@ -387,25 +387,6 @@ export const submitBidSchema = z.object({
 
 // --- Revenue ---
 
-// --- Job Lease ---
-
-export const claimJobSchema = z.object({
-  ttlSeconds: z.number().int().positive().max(600).optional().default(300),
-});
-
-export const heartbeatJobSchema = z.object({
-  fencingToken: z.number().int().nonnegative(),
-});
-
-export const releaseJobSchema = z.object({
-  fencingToken: z.number().int().nonnegative(),
-});
-
-export const submitJobResultSchema = z.object({
-  result: z.record(z.string(), z.unknown()),
-  fencingToken: z.number().int().nonnegative(),
-});
-
 export const reportRevenueSchema = z.object({
   amount: z.string().min(1),
   currency: z.string().optional().default("USDC"),
