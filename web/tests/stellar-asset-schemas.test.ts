@@ -281,7 +281,7 @@ describe("createTalosSchema — stellarAssetCode", () => {
     name: "Test Agent",
     category: "Development",
     description: "A test agent",
-    creatorPublicKey: "GABC",
+    creatorPublicKey: VALID_ISSUER_B, // must be a real G-address since creatorPublicKey is validated
     signature: "sig",
     message: "msg",
   };

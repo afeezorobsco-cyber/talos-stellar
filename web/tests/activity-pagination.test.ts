@@ -339,14 +339,13 @@ describe("GET /api/activity — cursor pagination", () => {
     },
   );
 
-  it("clamps limit=200 to max=100 and still returns 200", async () => {
-    mockFetchTransactions.mockResolvedValue({ transactions: [], nextCursor: null });
-
+  // Public analytics endpoints reject (rather than clamp) oversized limits (#491).
+  it("rejects limit=200 above max=100 with 400", async () => {
     const res = await globalActivityGET(
       new Request("http://localhost/api/activity?limit=200"),
     );
-    expect(res.status).toBe(200);
-    expect(mockFetchTransactions).toHaveBeenCalledWith(100, null);
+    expect(res.status).toBe(400);
+    expect(mockFetchTransactions).not.toHaveBeenCalled();
   });
 
   // ── Invalid cursor ─────────────────────────────────────────────────────────
@@ -357,7 +356,8 @@ describe("GET /api/activity — cursor pagination", () => {
     );
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body).toEqual({ error: "Invalid cursor" });
+    // Standard error envelope (#501)
+    expect(body).toMatchObject({ code: "BAD_REQUEST", message: "Invalid cursor" });
     // Should bail out before hitting the DB
     expect(mockFetchStats).not.toHaveBeenCalled();
     expect(mockFetchTransactions).not.toHaveBeenCalled();

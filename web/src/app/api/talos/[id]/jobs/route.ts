@@ -68,6 +68,13 @@ function idempotentResponse(
   return res;
 }
 
+/** 201 for a newly created job; echoes the idempotency key when one was sent. */
+function createdResponse(body: unknown, idempotencyKey: string | null): Response {
+  return idempotencyKey
+    ? idempotentResponse(body, 201, idempotencyKey, false)
+    : Response.json(body, { status: 201 });
+}
+
 async function submitAndVerifyPayment(
   signedXdr: string,
   expectedAmount: string,
@@ -329,7 +336,7 @@ export async function POST(
       );
 
       const finalBody = { ...responseBody, jobId: job.id };
-      return applyQuotaHeaders(Response.json(finalBody, { status: 201 }), quotaResult);
+      return applyQuotaHeaders(createdResponse(finalBody, idempotencyKey), quotaResult);
     }
 
     // ── Async: queue for agent to process ─────────────────────────────
@@ -371,7 +378,7 @@ export async function POST(
     );
 
     const finalBody = { ...responseBody, jobId: job.id };
-    return applyQuotaHeaders(Response.json(finalBody, { status: 201 }), quotaResult);
+    return applyQuotaHeaders(createdResponse(finalBody, idempotencyKey), quotaResult);
   } catch (err: unknown) {
     const e = err as Record<string, unknown>;
     if (e?.code === "23505") {

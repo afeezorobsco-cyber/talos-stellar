@@ -656,7 +656,9 @@ export async function parseBody<T extends z.ZodType>(
     if (bytes.byteLength > BODY_LIMIT_BYTES) {
       return { error: payloadTooLarge(request) };
     }
-    const text = new TextDecoder().decode(bytes);
+    // ignoreBOM keeps a leading U+FEFF in the text so JSON.parse rejects it:
+    // a BOM is not valid JSON (RFC 8259 §8.1) and must not be silently accepted.
+    const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
     raw = JSON.parse(text);
   } catch {
     return {

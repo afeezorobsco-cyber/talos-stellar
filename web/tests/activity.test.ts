@@ -102,7 +102,8 @@ describe("GET /api/activity", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid cursor" });
+    // Standard error envelope (#501)
+    expect(await response.json()).toMatchObject({ code: "BAD_REQUEST", message: "Invalid cursor" });
     expect(fetchActivityStats).not.toHaveBeenCalled();
     expect(fetchActivityTransactions).not.toHaveBeenCalled();
   });
