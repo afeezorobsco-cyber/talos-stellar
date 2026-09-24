@@ -20,6 +20,7 @@ import { existsSync, readFileSync, statSync, readdirSync } from "node:fs";
 import { resolve, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+import { orderByImports, stripImportsExports } from "./esm-concat.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SDK_ROOT = resolve(__dirname, "..");
@@ -167,68 +168,17 @@ const files = [];
   }
 })(ESM_DIR);
 files.sort();
+const orderedFiles = orderByImports(
+  files,
+  (f) => readFileSync(f, "utf8"),
+  (from, spec) => resolve(dirname(from), spec),
+);
 
 console.log(`[compat:edge] concatenating ${files.length} ESM files`);
 
-const EXPORT_REGEX =
-  /^export\s+(default\s+)?(?:(?:const|let|var|class|function|enum|async\s+function)\s+)?([A-Za-z0-9_$]+)/m;
-const REEXPORT_ALL = /^export\s+\*\s+from\s+["']([^"']+)["']/;
-const REEXPORT_NAMED = /^export\s+\{([^}]+)\}\s+from\s+["']([^"']+)["']/;
-const IMPORT_LINE =
-  /^import\s+(?:(?:\{[^}]*\}|\*\s+as\s+[A-Za-z0-9_$]+|[A-Za-z0-9_$]+(?:\s*,\s*\{[^}]*\})?)\s+from\s+)?["']([^"']+)["'];?\s*$/;
-
-function stripImportsExports(src) {
-  const lines = src.split(/\r?\n/);
-  const out = [];
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-
-    // Skip re-exports — sources are concatenated inline.
-    if (REEXPORT_ALL.test(line)) continue;
-    if (REEXPORT_NAMED.test(line)) continue;
-    if (IMPORT_LINE.test(line)) continue;
-
-    // `export default X` → `__EXPORTS__.default = X`
-    if (/^export\s+default\s+/.test(line)) {
-      const rest = line.replace(/^export\s+default\s+/, "");
-      out.push("__EXPORTS__.default = (" + rest + ");");
-      continue;
-    }
-
-    // `export class Foo`, `export function foo`, `export const x = ...`
-    const m = EXPORT_REGEX.exec(line);
-    if (m) {
-      const name = m[2];
-      const decl = line.replace(/^export\s+/, "");
-      out.push(decl);
-      if (name) out.push(`__EXPORTS__.${name} = ${name};`);
-      continue;
-    }
-
-    // `export { a, b as c }` local re-export
-    const namedLocal = /^export\s+\{([^}]+)\}\s*;?\s*$/.exec(line);
-    if (namedLocal) {
-      for (const part of namedLocal[1].split(",")) {
-        const bit = part.trim();
-        if (!bit) continue;
-        const asMatch = /^([A-Za-z0-9_$]+)\s+as\s+([A-Za-z0-9_$]+)$/.exec(bit);
-        if (asMatch) {
-          out.push(`__EXPORTS__.${asMatch[2]} = ${asMatch[1]};`);
-        } else {
-          out.push(`__EXPORTS__.${bit} = ${bit};`);
-        }
-      }
-      continue;
-    }
-
-    out.push(line);
-  }
-  return out.join("\n");
-}
-
 const sources = [];
 sources.push("var __EXPORTS__ = {};");
-for (const f of files) {
+for (const f of orderedFiles) {
   const rel = relative(ESM_DIR, f);
   const raw = readFileSync(f, "utf8");
   sources.push(`\n// ===== ${rel} =====`);
