@@ -450,6 +450,22 @@ export class TalosClient {
     return this.retry;
   }
 
+  /**
+   * Safe serialization: `JSON.stringify(client)` (e.g. from a logger) must
+   * never include the bearer API key or any other credential header.
+   */
+  toJSON(): Record<string, unknown> {
+    const safeHeaders: Record<string, string> = {};
+    for (const [name, value] of Object.entries(this.headers)) {
+      if (name.toLowerCase() !== "authorization") safeHeaders[name] = value;
+    }
+    return {
+      baseUrl: this.baseUrl,
+      headers: safeHeaders,
+      authenticated: "Authorization" in this.headers,
+    };
+  }
+
   /** Resolve the fetch implementation per request. Prefer override; fall back to global. */
   private resolveFetch(): typeof fetch {
     return this.fetchOverride ?? globalThis.fetch;

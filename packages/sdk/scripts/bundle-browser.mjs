@@ -14,6 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { orderByImports, stripImportsExports } from "./esm-concat.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -60,14 +61,19 @@ function fallbackBundle() {
     throw new Error(`ESM dist not found at ${ESM_DIR}. Run build:esm first.`);
   }
   const sources = [];
-  for (const f of walk(ESM_DIR).sort()) {
+  const files = orderByImports(
+    walk(ESM_DIR).sort(),
+    (f) => readFileSync(f, "utf8"),
+    (from, spec) => resolve(dirname(from), spec),
+  );
+  for (const f of files) {
     const rel = f.slice(ESM_DIR.length + 1);
-    sources.push(`// ${rel}\n` + readFileSync(f, "utf8"));
+    sources.push(`// ${rel}\n` + stripImportsExports(readFileSync(f, "utf8"), "__talos_exports__"));
   }
-  // Build a pseudo-module shim: wrap in an IIFE, re-export from the
-  // `index.js` entry. This fallback is not a perfect bundler but lets CI
-  // assert that the source files concatenate without syntax errors and
-  // that the entry exports are discoverable.
+  // Build a pseudo-module shim: inline every ESM file into one IIFE scope,
+  // rewriting `export`s onto __talos_exports__. This fallback is not a real
+  // bundler but lets CI assert that the sources load without Node APIs and
+  // that the public exports are discoverable.
   const banner =
     "(function(global){ 'use strict';\n" +
     "var __talos_exports__ = {};\n" +

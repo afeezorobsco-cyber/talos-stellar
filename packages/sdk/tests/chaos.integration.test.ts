@@ -319,7 +319,9 @@ describe("Chaos Integration - TalosWebhook.verify() Production Path", () => {
       expect(status).toBe("pending");
 
       await vi.advanceTimersByTimeAsync(1);
-      await expect(promise).resolves.toBeUndefined();
+      await expect(promise).resolves.toMatchObject({
+        signatures: expect.any(Array),
+      }); // verify() returns parsed signature metadata since #696
       vi.useRealTimers();
       expect(chaos.injectionCount).toBe(1);
     });
@@ -415,7 +417,9 @@ describe("Chaos Integration - TalosWebhook.verify() Production Path", () => {
           eventId: "evt_123",
           chaosInjector: chaos,
         }),
-      ).resolves.toBeUndefined();
+      ).resolves.toMatchObject({
+        signatures: expect.any(Array),
+      }); // verify() returns parsed signature metadata since #696
 
       expect(fakeStore.has).toHaveBeenCalledTimes(1);
       expect(fakeStore.set).toHaveBeenCalledTimes(1);
